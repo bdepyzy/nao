@@ -4,3 +4,25 @@
 **/.venv*
 **/venv
 
+# Build artifacts
+build/
+*.o
+*.so
+
+# SLAM output files
+KeyFrameTrajectory.txt
+FrameTrajectory.txt
+*.log
+
+# SSH keys
+nao-ssh
+nao-ssh.pub
+
+# Models (large files)
+models/
+*.pth
+*.h5
+*.tflite
+*.pt
+*.onnx
+

@@ -1,0 +1,92 @@
+# NAO Robot Camera Calibration for ORB-SLAM3
+# Resolution: 1280x960 (high quality)
+# Based on NAO V5 camera specifications
+
+%YAML:1.0
+
+# Camera calibration parameters for NAO top camera
+# Focal length scales with resolution
+
+Camera.fx: 1108.5
+Camera.fy: 1108.5
+Camera.cx: 640.0
+Camera.cy: 480.0
+
+Camera.k1: 0.0
+Camera.k2: 0.0
+Camera.p1: 0.0
+Camera.p2: 0.0
+Camera.k3: 0.0
+
+# Camera frames per second
+Camera.fps: 30.0
+
+# Color order of the images (0: BGR, 1: RGB)
+# NAO sends RGB
+Camera.RGB: 1
+
+# ORB Parameters
+# More features for higher resolution
+ORBextractor.nFeatures: 2000
+
+# ORB Extractor: Scale factor between levels in the scale pyramid
+ORBextractor.scaleFactor: 1.2
+
+# ORB Extractor: Number of levels in the scale pyramid
+ORBextractor.nLevels: 8
+
+# ORB Extractor: Fast threshold
+ORBextractor.fastThreshold: 20
+
+# ORB Extractor: If true, we use the Harris score instead of Shi-Tomasi
+ORBextractor.nFirstFast: 10
+
+# Viewer Parameters
+Viewer.width: 1280
+Viewer.height: 960
+Viewer.useViewer: true
+Viewer.ViewpointX: 0.0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -1.8
+Viewer.ViewpointF: 500.0
+
+# Atlas Parameters
+Atlas.maxKeypoints: 40000
+Atlas.windowSize: 20
+Atlas.minKeypoints: 10
+
+# System Parameters
+System.thDepth: 40.0
+
+# MapPoint parameters
+MapPoint.maxDepth: 50.0
+
+# KeyFrame parameters
+KeyFrame.maxDepth: 50.0
+
+# Loop Closing parameters
+LoopClosing.sigma: 1.0
+
+# IMU parameters (for future inertial extension)
+IMU.T_b_c1: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: f
+   data: [1.0, 0.0, 0.0, 0.0,
+          0.0, 1.0, 0.0, 0.0,
+          0.0, 0.0, 1.0, 0.0,
+          0.0, 0.0, 0.0, 1.0]
+IMU.T_b_c2: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: f
+   data: [1.0, 0.0, 0.0, 0.0,
+          0.0, 1.0, 0.0, 0.0,
+          0.0, 0.0, 1.0, 0.0,
+          0.0, 0.0, 0.0, 1.0]
+IMU.Frequency: 200.0
+IMU.NoiseGyro: 0.000169
+IMU.NoiseAcc: 0.002
+IMU.GyroWalk: 0.000024
+IMU.AccWalk: 0.0002
+IMU.InsertKFsWhenLost: true
