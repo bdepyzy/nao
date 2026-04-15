@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""NAO Robot Controller for SLAM
+"""NAO Robot Controller with Video Stream
 
-Run this alongside SLAM to control the robot with WASDQE keys.
+Control the robot with WASD keys while viewing the camera feed.
 
 Usage:
-  Terminal 1: ./run_slam.sh mono
-  Terminal 2: python slam_controller.py
+  python slam_controller.py
 
 Movement:
   W/S: forward/backward
@@ -23,25 +22,36 @@ import sys
 import numpy as np
 from config import ROBOT_IP, ROBOT_PORT
 
+VIDEO_URL = "http://{}:8080/stream".format(ROBOT_IP)
+
 
 class SLAMController:
-    """Minimal NAO controller for SLAM"""
+    """NAO controller with video feed"""
 
     def __init__(self):
+        self.cap = None
+
         try:
+            # Connect to NAOqi
             self.session = qi.Session()
             self.session.connect("tcp://{}:{}".format(ROBOT_IP, ROBOT_PORT))
             self.motion = self.session.service("ALMotion")
-
-            # Wake up and ready for walking
             self.motion.wakeUp()
 
-            # Track held keys with timestamps
+            # Connect to video stream
+            print("Connecting to video stream at {}...".format(VIDEO_URL))
+            self.cap = cv2.VideoCapture(VIDEO_URL)
+            if not self.cap.isOpened():
+                print("WARNING: Could not open video stream!")
+                print("Make sure robot_streamer.py is running on the NAO")
+            else:
+                print("Video stream connected!")
+
+            # Track held keys
             self.held_keys = {}
             self.last_update = time.time()
 
-            print("Connected to NAO at {}".format(ROBOT_IP))
-            print("\n=== SLAM Controller ===")
+            print("\n=== NAO Controller ===")
             print("Movement: W/S (fwd/back), A/D (strafe), Q/E (turn), SPACE stop")
             print("Press ESC to quit\n")
 
@@ -50,7 +60,7 @@ class SLAMController:
             sys.exit(1)
 
     def update_movement(self):
-        """Check held keys and send movement - stops instantly when nothing pressed"""
+        """Check held keys and send movement"""
         now = time.time()
 
         # Clear keys that haven't been pressed in 150ms
@@ -75,7 +85,7 @@ class SLAMController:
         elif "e" in held_move:
             theta = -0.5
 
-        # Send movement (0,0,0 when nothing held = instant stop)
+        # Send movement
         self.motion.setWalkTargetVelocity(x, y * 0.7, theta, 0)
 
         return x, y, theta
@@ -95,42 +105,88 @@ class SLAMController:
         return True
 
     def run(self):
-        """Main loop - runs alongside SLAM viewer"""
-        blank = 255 * np.ones((100, 400, 3), dtype=np.uint8)
+        """Main loop with video and controls"""
+        print("Starting controller...")
 
         while True:
-            # Update movement
-            x, y, theta = self.update_movement()
+            # Get video frame
+            if self.cap and self.cap.isOpened():
+                ret, frame = self.cap.read()
+                if ret:
+                    # Convert RGB to BGR for OpenCV display
+                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
-            # Non-blocking key check
+                    # Add overlay text
+                    x, y, theta = self.update_movement()
+
+                    status = "STOPPED"
+                    if x != 0 or y != 0 or theta != 0:
+                        status = "MOVING: x={:.1f} y={:.1f} turn={:.1f}".format(
+                            x, y, theta
+                        )
+
+                    # Draw status on frame
+                    cv2.putText(
+                        frame,
+                        status,
+                        (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.7,
+                        (0, 255, 0),
+                        2,
+                    )
+                    cv2.putText(
+                        frame,
+                        "WASD:move Q/E:turn SPACE:stop ESC:quit",
+                        (10, 60),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        (0, 255, 0),
+                        1,
+                    )
+
+                    cv2.imshow("NAO Camera + Control", frame)
+                else:
+                    # No frame - just update movement
+                    self.update_movement()
+                    # Create blank frame
+                    blank = np.zeros((480, 640, 3), dtype=np.uint8)
+                    cv2.putText(
+                        blank,
+                        "No video - check streamer",
+                        (50, 240),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        1.0,
+                        (0, 0, 255),
+                        2,
+                    )
+                    cv2.imshow("NAO Camera + Control", blank)
+            else:
+                # No video connection
+                self.update_movement()
+                blank = np.zeros((480, 640, 3), dtype=np.uint8)
+                cv2.putText(
+                    blank,
+                    "No video stream",
+                    (50, 240),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1.0,
+                    (0, 0, 255),
+                    2,
+                )
+                cv2.imshow("NAO Camera + Control", blank)
+
+            # Handle keys
             key = cv2.waitKey(1) & 0xFF
             if key != 255:
                 if not self.handle_key(key):
                     break
 
-            # Update display
-            display = blank.copy()
-            status = "STOPPED"
-            if x != 0 or y != 0 or theta != 0:
-                status = "MOVING: x={:.1f} y={:.1f} th={:.1f}".format(x, y, theta)
-
-            cv2.putText(
-                display, status, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1
-            )
-            cv2.putText(
-                display,
-                "WASD move | Q/E turn | SPACE stop | ESC quit",
-                (10, 70),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.4,
-                (0, 0, 0),
-                1,
-            )
-            cv2.imshow("NAO Controller", display)
-
         # Cleanup
         print("\nStopping robot...")
         self.motion.setWalkTargetVelocity(0, 0, 0, 0)
+        if self.cap:
+            self.cap.release()
         cv2.destroyAllWindows()
 
 

@@ -41,4 +41,5 @@ UNCOVERED_DIR = "../uncovered"
 # SSH Settings
 SSH_KEY = "nao-ssh"
 SSH_USER = "nao"
+SSH_PASS = "nao"  # Set to None if using key auth only
 REMOTE_STREAMER_CMD = "python /home/nao/robot_streamer.py"

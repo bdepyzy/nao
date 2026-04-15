@@ -1,33 +1,34 @@
-# NAO Robot Control
+# NAO Robot Controller
 
-Control NAO robots with keyboard. Two controllers available:
+Control NAO robot with WASD keys + video feed.
 
-- `slam_controller.py` - Movement only (WASD + QE). Use this one.
-- `controller.py` - Movement + video stream. Broken half the time.
+## Files
 
-## Setup
+- `run_controller.py` - Auto-launches SSH, starts streamer on robot, runs controller locally
+- `slam_controller.py` - Controller with video window
+- `config.py` - Robot IP, SSH password, settings
+- `robot_streamer.py` - Upload this to `/home/nao/` on the robot (if not already there)
+- `nao-ssh` - SSH private key (or use password auth)
 
-Edit `config.py` and set your robot's IP:
+## Quick Start
 
+1. Edit `config.py` - set your robot's IP:
 ```python
-ROBOT_IP = "169.254.81.31"  # Your robot's IP
+ROBOT_IP = "169.254.81.31"
 ```
 
-## Run
-
-**One command does everything:**
-
+2. Run:
 ```bash
 python2 run_controller.py
 ```
 
 This will:
-1. SSH into the robot
-2. Start the video streamer
-3. Launch the controller
-4. When you quit (ESC), it stops the remote streamer automatically
+- SSH into the robot (password: "nao" from config)
+- Start `robot_streamer.py` on the NAO
+- Launch the controller locally with video
+- When you hit ESC, it stops everything
 
-A window pops up. **Click on it to focus**, then use keys:
+## Controls
 
 - **W/S** - Forward/Back
 - **A/D** - Strafe left/right  
@@ -35,84 +36,25 @@ A window pops up. **Click on it to focus**, then use keys:
 - **SPACE** - Stop
 - **ESC** - Quit
 
-The robot only moves while you're holding the key down.
+**Click on the video window first** - keys only work when window is focused.
 
-### Manual mode (if auto doesn't work)
+## Troubleshooting
+
+**"Cannot connect"** - Robot's NAOqi is down. SSH in and run: `naoqi &`
+
+**"No video"** - Streamer not running on robot. The launcher should start it automatically.
+
+**Password prompts** - Make sure `SSH_PASS = "nao"` is set in config.py
+
+## Manual Mode
+
+If auto-launcher doesn't work:
 
 ```bash
-# Terminal 1 - SSH to robot
-ssh -i nao-ssh nao@169.254.81.31
+# Terminal 1 - SSH to robot and start streamer
+ssh nao@169.254.81.31
 python robot_streamer.py
 
 # Terminal 2 - Run controller
 python2 slam_controller.py
-```
-
-## Troubleshooting
-
-**"Cannot connect"** - Make sure `robot_streamer.py` is running on the NAO.
-
-**"qi module not found"** - Use `python2`, not `python3`. NAOqi only works with Python 2.7.
-
-**Robot doesn't move** - Click the controller window first to focus it. The window must be active.
-
-**Connection refused** - Wrong IP. Edit `config.py` and ping the robot to verify.
-
-## Which Robot is Which
-
-config.py has comments:
-- `169.254.81.31` - Super load blue robot (SSH works)
-- `169.254.66.118` - Blue robot with dead battery sticker (SSH broken, needs password)
-
-Switch IPs in config.py to change robots.
-
-## File Reference
-
-### Python Files
-
-- **`run_controller.py`** - **USE THIS.** Auto-starts streamer on robot via SSH, runs controller locally, cleans up on exit.
-- **`slam_controller.py`** - Main controller. WASD movement, connects to NAOqi.
-- **`controller.py`** - Alternate controller with video preview. Kinda janky.
-- **`robot_streamer.py`** - Runs ON the robot. HTTP video server at 50 FPS.
-- **`imu_streamer.py`** - Runs ON the robot. Streams IMU data for inertial SLAM.
-- **`view_fast.py`** - Just the video viewer. See what robot sees without controlling.
-- **`config.py`** - Robot IP, SSH key path, and other settings.
-
-### C++ Files (SLAM)
-
-- **`mono_nao.cc`** - Basic monocular SLAM. Camera only, outputs trajectory.
-- **`mono_inertial_nao.cc`** - SLAM with IMU fusion. More accurate.
-- **`mono_nao_control.cc`** - SLAM with built-in WASD control.
-
-### Scripts
-
-- **`run_slam.sh`** - Wrapper for C++ binaries:
-  - `./run_slam.sh mono` - Basic SLAM
-  - `./run_slam.sh inertial` - SLAM + IMU
-  - `./run_slam.sh control` - SLAM + keyboard control
-
-### Config
-
-- **`NAO_640x480.yaml`** - Camera calibration for 640x480
-- **`NAO_1280x960.yaml`** - Camera calibration for 1280x960
-
-## Quick Start
-
-**Just drive the robot:**
-```bash
-python2 run_controller.py
-```
-
-**SLAM + drive:**
-```bash
-# Terminal 1
-./run_slam.sh control
-
-# Terminal 2 (optional - external control)
-python2 slam_controller.py
-```
-
-**Just view camera:**
-```bash
-python2 view_fast.py
 ```

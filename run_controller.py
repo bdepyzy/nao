@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Auto-launcher for NAO controller with SSH management.
+"""Auto-launcher for NAO controller with automatic SSH password.
 
-Starts robot_streamer.py on the NAO via SSH, runs the controller locally,
-and cleans up the remote process on exit.
+Uses sshpass for automatic password auth, starts robot_streamer.py on NAO,
+runs the controller locally, cleans up on exit.
 """
 
 import subprocess
@@ -13,73 +13,131 @@ import sys
 import os
 
 # Import config
-from config import ROBOT_IP, SSH_KEY, SSH_USER, REMOTE_STREAMER_CMD
+from config import ROBOT_IP, SSH_USER, SSH_PASS, REMOTE_STREAMER_CMD
 
 
 class SSHManager:
     def __init__(self):
         self.remote_pid = None
+        self.we_started_it = False
+
+    def build_ssh_cmd(self, remote_cmd):
+        """Build SSH command with automatic password."""
+        if SSH_PASS:
+            # Use sshpass for automatic password
+            cmd = [
+                "sshpass",
+                "-p",
+                SSH_PASS,
+                "ssh",
+                "-x",  # Disable X11 forwarding
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
+                "-o",
+                "LogLevel=ERROR",
+                "-o",
+                "ConnectTimeout=5",
+                "{}@{}".format(SSH_USER, ROBOT_IP),
+                remote_cmd,
+            ]
+        else:
+            # Use key-based auth
+            cmd = [
+                "ssh",
+                "-x",  # Disable X11 forwarding
+                "-i",
+                "nao-ssh",
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
+                "-o",
+                "LogLevel=ERROR",
+                "-o",
+                "ConnectTimeout=5",
+                "{}@{}".format(SSH_USER, ROBOT_IP),
+                remote_cmd,
+            ]
+        return cmd
 
     def start_remote_streamer(self):
         """SSH into robot and start streamer in background."""
         print("[SSH] Connecting to {}@{}...".format(SSH_USER, ROBOT_IP))
 
-        # Start streamer on robot - run it in background and capture PID
-        ssh_cmd = [
-            "ssh",
-            "-i",
-            SSH_KEY,
-            "-o",
-            "StrictHostKeyChecking=no",
-            "-o",
-            "UserKnownHostsFile=/dev/null",
-            "-o",
-            "LogLevel=ERROR",
-            "{}@{}".format(SSH_USER, ROBOT_IP),
-            "cd ~ && nohup python robot_streamer.py > /dev/null 2>&1 & sleep 1 && pgrep -f 'python.*robot_streamer' | tail -1",
-        ]
+        # First check if streamer is already running
+        check_cmd = self.build_ssh_cmd("pgrep -f 'python.*robot_streamer' | head -1")
+        try:
+            result = subprocess.check_output(check_cmd, stderr=subprocess.STDOUT)
+            if result.strip():
+                self.remote_pid = result.strip()
+                print(
+                    "[SSH] Streamer already running (PID: {})".format(self.remote_pid)
+                )
+                self.we_started_it = False
+                time.sleep(1)
+                return True
+        except:
+            pass
+
+        # Start streamer on robot
+        print("[SSH] Starting robot_streamer.py...")
+        remote_cmd = "nohup python /home/nao/robot_streamer.py > /dev/null 2>&1 &"
+        ssh_cmd = self.build_ssh_cmd(remote_cmd)
 
         try:
-            result = subprocess.check_output(ssh_cmd, stderr=subprocess.STDOUT)
-            self.remote_pid = result.strip()
-            if self.remote_pid:
-                print(
-                    "[SSH] Streamer started on robot (PID: {})".format(self.remote_pid)
-                )
-            else:
-                print("[SSH] Streamer started (PID unknown)")
+            subprocess.call(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print("[SSH] Streamer started")
+            self.we_started_it = True
 
             # Give streamer time to initialize
-            print("[SSH] Waiting for streamer to initialize...")
+            print("[SSH] Waiting 3 seconds for streamer to initialize...")
             time.sleep(3)
+
+            # Try to get PID
+            pid_cmd = self.build_ssh_cmd("pgrep -f 'python.*robot_streamer' | head -1")
+            try:
+                result = subprocess.check_output(pid_cmd, stderr=subprocess.STDOUT)
+                self.remote_pid = result.strip()
+                print("[SSH] Streamer PID: {}".format(self.remote_pid))
+            except:
+                pass
+
             return True
 
         except subprocess.CalledProcessError as e:
             print("[SSH] Failed to start streamer: {}".format(e))
+            print("[SSH] Make sure sshpass is installed: sudo apt-get install sshpass")
+            return False
+        except Exception as e:
+            print("[SSH] Unexpected error: {}".format(e))
+            return False
+        except Exception as e:
+            print("[SSH] Unexpected error: {}".format(e))
+            return False
+        except subprocess.CalledProcessError as e:
+            print("[SSH] Failed to start streamer: {}".format(e))
+            print("[SSH] Make sure sshpass is installed: sudo apt-get install sshpass")
+            return False
+        except Exception as e:
+            print("[SSH] Unexpected error: {}".format(e))
             return False
 
     def stop_remote_streamer(self):
         """Kill the remote streamer process."""
+        if not self.we_started_it:
+            print("[SSH] Streamer was already running, leaving it alone.")
+            return
+
         print("[SSH] Stopping remote streamer...")
 
         # Kill by PID if we have it, or by pattern match
         kill_cmd = "kill {} 2>/dev/null; pkill -9 -f robot_streamer 2>/dev/null; echo done".format(
             self.remote_pid if self.remote_pid else "-1"
         )
+        ssh_cmd = self.build_ssh_cmd(kill_cmd)
 
-        ssh_cmd = [
-            "ssh",
-            "-i",
-            SSH_KEY,
-            "-o",
-            "StrictHostKeyChecking=no",
-            "-o",
-            "UserKnownHostsFile=/dev/null",
-            "-o",
-            "LogLevel=ERROR",
-            "{}@{}".format(SSH_USER, ROBOT_IP),
-            kill_cmd,
-        ]
         try:
             subprocess.call(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             print("[SSH] Remote streamer stopped.")
