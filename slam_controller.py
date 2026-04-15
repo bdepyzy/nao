@@ -20,9 +20,7 @@ import cv2
 import time
 import sys
 import numpy as np
-from config import ROBOT_IP, ROBOT_PORT
-
-VIDEO_URL = "http://{}:8080/stream".format(ROBOT_IP)
+from config import ROBOT_IP, ROBOT_PORT, VIDEO_URL
 
 
 class SLAMController:
