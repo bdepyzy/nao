@@ -1,8 +1,12 @@
 # -*- coding: future_fstrings -*-
 # config.py - Centralized configuration for the NAO robot application
 
-# Robot Connection
+# this is super load blue robot
 ROBOT_IP = "169.254.81.31"
+
+# this is blue robot with battery dead sticker
+#ROBOT_IP = "169.254.66.118"
+
 ROBOT_PORT = 9559
 
 # Video Settings

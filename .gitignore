@@ -8,6 +8,14 @@
 build/
 *.o
 *.so
+*.a
+*.out
+
+# Binaries
+mono_nao
+mono_inertial_nao
+mono_nao_control
+*.exe
 
 # SLAM output files
 KeyFrameTrajectory.txt

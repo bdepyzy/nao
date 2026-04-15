@@ -21,9 +21,7 @@ import cv2
 import time
 import sys
 import numpy as np
-
-ROBOT_IP = "169.254.81.31"
-ROBOT_PORT = 9559
+from config import ROBOT_IP, ROBOT_PORT
 
 
 class SLAMController:
@@ -60,16 +58,22 @@ class SLAMController:
         self.held_keys = {k: t for k, t in self.held_keys.items() if now - t < timeout}
 
         # Movement keys
-        move_keys = {'w', 's', 'a', 'd', 'q', 'e'}
+        move_keys = {"w", "s", "a", "d", "q", "e"}
         held_move = set(self.held_keys.keys()) & move_keys
 
         x = y = theta = 0.0
-        if 'w' in held_move: x = 0.5
-        elif 's' in held_move: x = -0.5
-        if 'a' in held_move: y = 0.5
-        elif 'd' in held_move: y = -0.5
-        if 'q' in held_move: theta = 0.5
-        elif 'e' in held_move: theta = -0.5
+        if "w" in held_move:
+            x = 0.5
+        elif "s" in held_move:
+            x = -0.5
+        if "a" in held_move:
+            y = 0.5
+        elif "d" in held_move:
+            y = -0.5
+        if "q" in held_move:
+            theta = 0.5
+        elif "e" in held_move:
+            theta = -0.5
 
         # Send movement (0,0,0 when nothing held = instant stop)
         self.motion.setWalkTargetVelocity(x, y * 0.7, theta, 0)
@@ -84,7 +88,7 @@ class SLAMController:
         k = chr(key).lower()
 
         # Track movement keys
-        move_keys = {'w', 's', 'a', 'd', 'q', 'e'}
+        move_keys = {"w", "s", "a", "d", "q", "e"}
         if k in move_keys:
             self.held_keys[k] = time.time()
 
@@ -110,10 +114,18 @@ class SLAMController:
             if x != 0 or y != 0 or theta != 0:
                 status = "MOVING: x={:.1f} y={:.1f} th={:.1f}".format(x, y, theta)
 
-            cv2.putText(display, status, (10, 40),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
-            cv2.putText(display, "WASD move | Q/E turn | SPACE stop | ESC quit",
-                       (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+            cv2.putText(
+                display, status, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1
+            )
+            cv2.putText(
+                display,
+                "WASD move | Q/E turn | SPACE stop | ESC quit",
+                (10, 70),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.4,
+                (0, 0, 0),
+                1,
+            )
             cv2.imshow("NAO Controller", display)
 
         # Cleanup

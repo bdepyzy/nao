@@ -31,10 +31,8 @@ import numpy as np
 import threading
 import sys
 import time
+from config import ROBOT_IP, ROBOT_PORT
 
-# Config
-ROBOT_IP = "169.254.81.31"
-ROBOT_PORT = 9559
 VIDEO_URL = "http://{}:8080/stream".format(ROBOT_IP)
 
 
@@ -101,16 +99,22 @@ class FastNAOController:
         self.held_keys = {k: t for k, t in self.held_keys.items() if now - t < timeout}
 
         # Movement keys
-        move_keys = {'w', 's', 'a', 'd', 'q', 'e'}
+        move_keys = {"w", "s", "a", "d", "q", "e"}
         held_move = set(self.held_keys.keys()) & move_keys
 
         x = y = t = 0.0
-        if 'w' in held_move: x = 0.5
-        elif 's' in held_move: x = -0.5
-        if 'a' in held_move: y = 0.5
-        elif 'd' in held_move: y = -0.5
-        if 'q' in held_move: t = 0.5
-        elif 'e' in held_move: t = -0.5
+        if "w" in held_move:
+            x = 0.5
+        elif "s" in held_move:
+            x = -0.5
+        if "a" in held_move:
+            y = 0.5
+        elif "d" in held_move:
+            y = -0.5
+        if "q" in held_move:
+            t = 0.5
+        elif "e" in held_move:
+            t = -0.5
 
         # Send movement (0,0,0,0 when nothing held = instant stop!)
         self.motion.setWalkTargetVelocity(x, y * 0.7, t, 0)
@@ -123,41 +127,43 @@ class FastNAOController:
         k = chr(key).lower()
 
         # Track movement keys with timestamp (for release detection)
-        move_keys = {'w', 's', 'a', 'd', 'q', 'e'}
+        move_keys = {"w", "s", "a", "d", "q", "e"}
         if k in move_keys:
             self.held_keys[k] = time.time()
 
         # Head (one-shot movement)
-        if k == 'i':
+        if k == "i":
             self.h_pitch = max(self.h_pitch - self.h_speed, -0.6)
-        elif k == 'k':
+        elif k == "k":
             self.h_pitch = min(self.h_pitch + self.h_speed, 0.6)
-        elif k == 'j':
+        elif k == "j":
             self.h_yaw = min(self.h_yaw + self.h_speed, 2.0)
-        elif k == 'l':
+        elif k == "l":
             self.h_yaw = max(self.h_yaw - self.h_speed, -2.0)
         # Direct arm control (shoulder pitch - arms up/down)
-        elif k == 'u':  # Left arm up
+        elif k == "u":  # Left arm up
             try:
                 current = self.motion.getAngles("LShoulderPitch", True)[0]
                 self.motion.setAngles("LShoulderPitch", max(current - 0.2, -0.5), 0.1)
                 print("Left arm up")
-            except: pass
-        elif k == 'j':  # Left arm down (wait, j is head... let's use different keys)
+            except:
+                pass
+        elif k == "j":  # Left arm down (wait, j is head... let's use different keys)
             pass  # j is used for head, skip
-        elif k == 'o':  # Right arm up
+        elif k == "o":  # Right arm up
             try:
                 current = self.motion.getAngles("RShoulderPitch", True)[0]
                 self.motion.setAngles("RShoulderPitch", max(current - 0.2, -0.5), 0.1)
                 print("Right arm up")
-            except: pass
-        elif k == 'l':  # Right arm down
+            except:
+                pass
+        elif k == "l":  # Right arm down
             pass  # l is used for head, skip
 
         self.motion.setAngles(["HeadYaw", "HeadPitch"], [self.h_yaw, self.h_pitch], 0.3)
 
         # Hand controls
-        if k == 'r':  # Close right hand
+        if k == "r":  # Close right hand
             print("Closing right hand...")
             try:
                 self.motion.setAngles("RHand", 1.0, 0.5)
@@ -165,7 +171,7 @@ class FastNAOController:
                 print("Right hand CLOSED")
             except Exception as e:
                 print("Error closing right hand: {}".format(e))
-        elif k == 't':  # Open right hand
+        elif k == "t":  # Open right hand
             print("Opening right hand...")
             try:
                 self.motion.setAngles("RHand", 0.0, 0.5)
@@ -173,7 +179,7 @@ class FastNAOController:
                 print("Right hand OPEN")
             except Exception as e:
                 print("Error opening right hand: {}".format(e))
-        elif k == 'f':  # Close left hand
+        elif k == "f":  # Close left hand
             print("Closing left hand...")
             try:
                 self.motion.setAngles("LHand", 1.0, 0.5)
@@ -181,7 +187,7 @@ class FastNAOController:
                 print("Left hand CLOSED")
             except Exception as e:
                 print("Error closing left hand: {}".format(e))
-        elif k == 'g':  # Open left hand
+        elif k == "g":  # Open left hand
             print("Opening left hand...")
             try:
                 self.motion.setAngles("LHand", 0.0, 0.5)
@@ -191,32 +197,32 @@ class FastNAOController:
                 print("Error opening left hand: {}".format(e))
 
         # Combat poses
-        elif k == '1':  # Guard up
+        elif k == "1":  # Guard up
             print("GUARD UP!")
             self._guard_pose()
-        elif k == '2':  # Fight stance
+        elif k == "2":  # Fight stance
             print("FIGHT STANCE!")
             self._fight_stance()
-        elif k == '3':  # Arms forward
+        elif k == "3":  # Arms forward
             print("ARMS FORWARD!")
             self._arms_forward()
-        elif k == '0':  # Neutral
+        elif k == "0":  # Neutral
             print("Neutral pose")
             self._neutral_pose()
 
         # Direct arm control (using keys that don't conflict)
-        elif k == 'z':  # Left arm up
+        elif k == "z":  # Left arm up
             self._move_arm("LShoulderPitch", -0.2)
-        elif k == 'x':  # Left arm down
+        elif k == "x":  # Left arm down
             self._move_arm("LShoulderPitch", 0.2)
-        elif k == 'c':  # Right arm up
+        elif k == "c":  # Right arm up
             self._move_arm("RShoulderPitch", -0.2)
-        elif k == 'v':  # Right arm down
+        elif k == "v":  # Right arm down
             self._move_arm("RShoulderPitch", 0.2)
-        elif k == 'b':  # Both arms up
+        elif k == "b":  # Both arms up
             self._move_arm("LShoulderPitch", -0.2)
             self._move_arm("RShoulderPitch", -0.2)
-        elif k == 'n':  # Both arms down
+        elif k == "n":  # Both arms down
             self._move_arm("LShoulderPitch", 0.2)
             self._move_arm("RShoulderPitch", 0.2)
 
@@ -228,11 +234,29 @@ class FastNAOController:
             # Arms up in front of face, elbows tucked in
             # ShoulderPitch: arms forward, ShoulderRoll: arms out to sides
             # ElbowRoll: bend elbow (positive), ElbowYaw: rotation
-            self.motion.setAngles(["LShoulderPitch", "LShoulderRoll", "LElbowRoll", "LElbowYaw",
-                                   "RShoulderPitch", "RShoulderRoll", "RElbowRoll", "RElbowYaw"],
-                                  [1.3, 0.5, 1.4, -1.5,   # Left arm - up and in
-                                   1.3, -0.5, -1.4, 1.5],  # Right arm - up and in
-                                  0.2)
+            self.motion.setAngles(
+                [
+                    "LShoulderPitch",
+                    "LShoulderRoll",
+                    "LElbowRoll",
+                    "LElbowYaw",
+                    "RShoulderPitch",
+                    "RShoulderRoll",
+                    "RElbowRoll",
+                    "RElbowYaw",
+                ],
+                [
+                    1.3,
+                    0.5,
+                    1.4,
+                    -1.5,  # Left arm - up and in
+                    1.3,
+                    -0.5,
+                    -1.4,
+                    1.5,
+                ],  # Right arm - up and in
+                0.2,
+            )
             # Close fists
             self.motion.setAngles(["LHand", "RHand"], [1.0, 1.0], 0.2)
             print("Guard pose set!")
@@ -243,11 +267,29 @@ class FastNAOController:
         """Fight stance - left hand forward jab, right guarding"""
         try:
             # Left arm extended forward, right arm guarding face
-            self.motion.setAngles(["LShoulderPitch", "LShoulderRoll", "LElbowRoll", "LElbowYaw",
-                                   "RShoulderPitch", "RShoulderRoll", "RElbowRoll", "RElbowYaw"],
-                                  [1.0, 0.3, 0.2, -1.5,   # Left arm - forward jab
-                                   1.3, -0.5, -1.2, 1.0],  # Right arm - guarding
-                                  0.2)
+            self.motion.setAngles(
+                [
+                    "LShoulderPitch",
+                    "LShoulderRoll",
+                    "LElbowRoll",
+                    "LElbowYaw",
+                    "RShoulderPitch",
+                    "RShoulderRoll",
+                    "RElbowRoll",
+                    "RElbowYaw",
+                ],
+                [
+                    1.0,
+                    0.3,
+                    0.2,
+                    -1.5,  # Left arm - forward jab
+                    1.3,
+                    -0.5,
+                    -1.2,
+                    1.0,
+                ],  # Right arm - guarding
+                0.2,
+            )
             self.motion.setAngles(["LHand", "RHand"], [1.0, 1.0], 0.2)
             print("Fight stance set!")
         except Exception as e:
@@ -256,11 +298,29 @@ class FastNAOController:
     def _neutral_pose(self):
         """Neutral - arms relaxed at sides"""
         try:
-            self.motion.setAngles(["LShoulderPitch", "LShoulderRoll", "LElbowRoll", "LElbowYaw",
-                                   "RShoulderPitch", "RShoulderRoll", "RElbowRoll", "RElbowYaw"],
-                                  [1.5, 0.1, -0.1, 0.0,   # Left arm down
-                                   1.5, -0.1, 0.1, 0.0],   # Right arm down
-                                  0.2)
+            self.motion.setAngles(
+                [
+                    "LShoulderPitch",
+                    "LShoulderRoll",
+                    "LElbowRoll",
+                    "LElbowYaw",
+                    "RShoulderPitch",
+                    "RShoulderRoll",
+                    "RElbowRoll",
+                    "RElbowYaw",
+                ],
+                [
+                    1.5,
+                    0.1,
+                    -0.1,
+                    0.0,  # Left arm down
+                    1.5,
+                    -0.1,
+                    0.1,
+                    0.0,
+                ],  # Right arm down
+                0.2,
+            )
             self.motion.setAngles(["LHand", "RHand"], [0.0, 0.0], 0.2)
             print("Neutral pose set!")
         except Exception as e:
@@ -269,10 +329,8 @@ class FastNAOController:
     def _arms_forward(self):
         """Both arms extended forward"""
         try:
-            self.motion.setAngles(["LShoulderPitch", "RShoulderPitch"],
-                                  [0.5, 0.5], 0.2)
-            self.motion.setAngles(["LShoulderRoll", "RShoulderRoll"],
-                                  [0.0, 0.0], 0.2)
+            self.motion.setAngles(["LShoulderPitch", "RShoulderPitch"], [0.5, 0.5], 0.2)
+            self.motion.setAngles(["LShoulderRoll", "RShoulderRoll"], [0.0, 0.0], 0.2)
             print("Arms forward!")
         except Exception as e:
             print("Error: {}".format(e))
@@ -330,10 +388,26 @@ class FastNAOController:
                 # Draw FPS
                 frame = self.latest_frame.copy()
                 fps_text = "FPS: {:.1f}".format(self.current_fps)
-                cv2.putText(frame, fps_text, (10, 30),
-                           cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4, cv2.LINE_AA)
-                cv2.putText(frame, fps_text, (10, 30),
-                           cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2, cv2.LINE_AA)
+                cv2.putText(
+                    frame,
+                    fps_text,
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 0, 0),
+                    4,
+                    cv2.LINE_AA,
+                )
+                cv2.putText(
+                    frame,
+                    fps_text,
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 255, 255),
+                    2,
+                    cv2.LINE_AA,
+                )
 
                 cv2.imshow("NAO - Fast Stream", frame)
 

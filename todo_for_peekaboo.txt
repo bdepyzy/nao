@@ -1,1 +1,0 @@
-run python3 tflite_server.py, then run python2.7 gui.py

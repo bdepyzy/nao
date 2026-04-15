@@ -1,87 +1,109 @@
-# NAO Robot AI System
+# NAO Robot Control
 
-This project combines NAO robot control with AI-powered vision models for object detection, face recognition, and behavior prediction. The system enables autonomous robot behaviors including head tracking, peekaboo gameplay, and real-time visual analysis.
+Control NAO robots with keyboard. Two controllers available:
 
-<small>To see how I used RL to make them walk, check out [here](http://danielobolensky.com/posts/making_robots_walk.html)</small>
+- `slam_controller.py` - Movement only (WASD + QE). Use this one.
+- `controller.py` - Movement + video stream. Broken half the time.
 
-## Prerequisites
-Python2.7 is required to run the NAO bot, Python3 is required to run the server.
+## Setup
 
-Once both python versions are downloaded, create respective virtual environments for them and download their requirements
+Edit `config.py` and set your robot's IP:
 
+```python
+ROBOT_IP = "169.254.81.31"  # Your robot's IP
 ```
-# If Python2.7 use requirements_py27.txt
-# If Python3 use requirements_py3.txt
-```
-### Terminal 1: NAO Robot Control
+
+## Run
+
+### 1. SSH into the robot and start the video streamer:
+
 ```bash
-source .venv_27/bin/activate
-python2.7 src/main.py
+ssh -i nao-ssh nao@169.254.81.31
+python robot_streamer.py
 ```
 
-### Terminal 2: Server
+Keep this running in a terminal.
+
+### 2. Run the controller:
+
 ```bash
-source .venv_3/bin/activate
-python3 src/tflite_server.py
+python2 slam_controller.py
 ```
 
-## AI Models Supported
-The server can run multiple models for different tasks:
+A window pops up. **Click on it to focus**, then use keys:
 
-### 1. **TensorFlow Lite Model** (`/predict/tflite`)
-- **File**: `models/peekaboo_model.tflite`
-- **Purpose**: Custom peekaboo behavior prediction
-- **Input**: 224x224 images
-- **Output**: Behavior classification predictions
+- **W/S** - Forward/Back
+- **A/D** - Strafe left/right  
+- **Q/E** - Turn left/right
+- **SPACE** - Stop
+- **ESC** - Quit
 
-### 2. **YOLO Object Detection** (`/predict/yolo`)
-- **File**: `models/yolov8n.pt` or `models/yolov7.pt`
-- **Purpose**: Real-time object detection
-- **Output**: Bounding boxes, confidence scores, class IDs
-- **Classes**: 80 COCO dataset classes (person, car, etc.)
+The robot only moves while you're holding the key down.
 
-### 3. **Face Detection** (`/predict/face`)
-- **Library**: face_recognition (HOG-based)
-- **Purpose**: Detect human faces in images
-- **Output**: Face bounding box coordinates
-- **Features**: Optimized for speed with image downscaling
+## Troubleshooting
 
-### 4. **Combined Inference** (`/predict/both`)
-- Runs all available models on the same image
-- Returns combined results from TFLite, YOLO, and face detection
+**"Cannot connect"** - Make sure `robot_streamer.py` is running on the NAO.
 
-## API Endpoints
+**"qi module not found"** - Use `python2`, not `python3`. NAOqi only works with Python 2.7.
 
-- `POST /predict/tflite` - TensorFlow Lite model only
-- `POST /predict/yolo` - YOLO object detection only  
-- `POST /predict/face` - Face detection only
-- `POST /predict/both` - All models
-- `GET /status` - Check server and model status
+**Robot doesn't move** - Click the controller window first to focus it. The window must be active.
 
-## Models Directory
+**Connection refused** - Wrong IP. Edit `config.py` and ping the robot to verify.
 
-Ensure the `models/` directory contains:
-- `peekaboo_model.tflite` - Custom TFLite model
-- `yolov8n.pt` or `yolov7.pt` - YOLO weights
-- `coco.names` - COCO class names
+## Which Robot is Which
 
-## Robot Capabilities
+config.py has comments:
+- `169.254.81.31` - Super load blue robot (SSH works)
+- `169.254.66.118` - Blue robot with dead battery sticker (SSH broken, needs password)
 
-### Movement Control
-- **Head Tracking**: Autonomous head movement following detected faces or objects
-- **Posture Management**: Sitting, standing, and gesture control
-- **Motor Control**: Joint-level movement with position feedback
-- **Behavioral Responses**: Programmed reactions to visual stimuli
+Switch IPs in config.py to change robots.
 
-### Vision System
-- **Real-time Video Capture**: 320x240 RGB at 30fps from NAO's camera
-- **Multi-model Processing**: Simultaneous face detection, object recognition, and behavior prediction
-- **Image Classification**: Custom TensorFlow Lite models for specialized tasks
-- **Object Detection**: YOLO-based detection of 80 COCO dataset classes
-- **Face Recognition**: HOG-based face detection optimized for robot interaction
+## File Reference
 
-### Interactive Features
-- **Peekaboo Game**: AI-driven gameplay with behavioral prediction
-- **Training Mode**: Capture and classify interaction data
-- **GUI Control**: Real-time video monitoring and manual robot control
-- **Data Collection**: Automatic image saving for model training (`covered/` and `uncovered/` directories)
+### Python Files
+
+- **`slam_controller.py`** - Main controller. WASD movement, connects to NAOqi.
+- **`controller.py`** - Alternate controller with video preview. Kinda janky.
+- **`robot_streamer.py`** - Runs ON the robot. HTTP video server at 50 FPS.
+- **`imu_streamer.py`** - Runs ON the robot. Streams IMU data for inertial SLAM.
+- **`view_fast.py`** - Just the video viewer. See what robot sees without controlling.
+- **`config.py`** - Robot IP and other settings.
+
+### C++ Files (SLAM)
+
+- **`mono_nao.cc`** - Basic monocular SLAM. Camera only, outputs trajectory.
+- **`mono_inertial_nao.cc`** - SLAM with IMU fusion. More accurate.
+- **`mono_nao_control.cc`** - SLAM with built-in WASD control.
+
+### Scripts
+
+- **`run_slam.sh`** - Wrapper for C++ binaries:
+  - `./run_slam.sh mono` - Basic SLAM
+  - `./run_slam.sh inertial` - SLAM + IMU
+  - `./run_slam.sh control` - SLAM + keyboard control
+
+### Config
+
+- **`NAO_640x480.yaml`** - Camera calibration for 640x480
+- **`NAO_1280x960.yaml`** - Camera calibration for 1280x960
+
+## Quick Start
+
+**Just drive the robot:**
+```bash
+python2 slam_controller.py
+```
+
+**SLAM + drive:**
+```bash
+# Terminal 1
+./run_slam.sh control
+
+# Terminal 2 (optional - external control)
+python2 slam_controller.py
+```
+
+**Just view camera:**
+```bash
+python2 view_fast.py
+```
