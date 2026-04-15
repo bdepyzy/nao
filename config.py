@@ -5,7 +5,7 @@
 ROBOT_IP = "169.254.81.31"
 
 # this is blue robot with battery dead sticker
-#ROBOT_IP = "169.254.66.118"
+# ROBOT_IP = "169.254.66.118"
 
 ROBOT_PORT = 9559
 
@@ -37,3 +37,8 @@ ZMQ_SUB_PORT = 5556
 # Image Save Directories
 COVERED_DIR = "../covered"
 UNCOVERED_DIR = "../uncovered"
+
+# SSH Settings
+SSH_KEY = "nao-ssh"
+SSH_USER = "nao"
+REMOTE_STREAMER_CMD = "python /home/nao/robot_streamer.py"

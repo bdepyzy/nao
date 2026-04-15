@@ -15,20 +15,17 @@ ROBOT_IP = "169.254.81.31"  # Your robot's IP
 
 ## Run
 
-### 1. SSH into the robot and start the video streamer:
+**One command does everything:**
 
 ```bash
-ssh -i nao-ssh nao@169.254.81.31
-python robot_streamer.py
+python2 run_controller.py
 ```
 
-Keep this running in a terminal.
-
-### 2. Run the controller:
-
-```bash
-python2 slam_controller.py
-```
+This will:
+1. SSH into the robot
+2. Start the video streamer
+3. Launch the controller
+4. When you quit (ESC), it stops the remote streamer automatically
 
 A window pops up. **Click on it to focus**, then use keys:
 
@@ -39,6 +36,17 @@ A window pops up. **Click on it to focus**, then use keys:
 - **ESC** - Quit
 
 The robot only moves while you're holding the key down.
+
+### Manual mode (if auto doesn't work)
+
+```bash
+# Terminal 1 - SSH to robot
+ssh -i nao-ssh nao@169.254.81.31
+python robot_streamer.py
+
+# Terminal 2 - Run controller
+python2 slam_controller.py
+```
 
 ## Troubleshooting
 
@@ -62,12 +70,13 @@ Switch IPs in config.py to change robots.
 
 ### Python Files
 
+- **`run_controller.py`** - **USE THIS.** Auto-starts streamer on robot via SSH, runs controller locally, cleans up on exit.
 - **`slam_controller.py`** - Main controller. WASD movement, connects to NAOqi.
 - **`controller.py`** - Alternate controller with video preview. Kinda janky.
 - **`robot_streamer.py`** - Runs ON the robot. HTTP video server at 50 FPS.
 - **`imu_streamer.py`** - Runs ON the robot. Streams IMU data for inertial SLAM.
 - **`view_fast.py`** - Just the video viewer. See what robot sees without controlling.
-- **`config.py`** - Robot IP and other settings.
+- **`config.py`** - Robot IP, SSH key path, and other settings.
 
 ### C++ Files (SLAM)
 
@@ -91,7 +100,7 @@ Switch IPs in config.py to change robots.
 
 **Just drive the robot:**
 ```bash
-python2 slam_controller.py
+python2 run_controller.py
 ```
 
 **SLAM + drive:**
