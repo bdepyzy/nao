@@ -4,37 +4,58 @@ Control NAO robot with WASD keys + video feed.
 
 ## Files
 
-- `run_controller.py` - Launcher (just runs slam_controller.py)
-- `slam_controller.py` - Controller with video window
 - `config.py` - Robot IP and settings
-- `robot_streamer.py` - **Upload this to `/home/nao/` on the robot**
+- `robot_streamer.py` - MJPEG camera streamer; run this on the robot
+- `slam_controller.py` - Python 2 camera viewer + direct NAO control
+- `nao_motion_bridge.py` - Python 2 UDP bridge to `ALMotion`
+- `cuvslam_nao_controller.py` - Python 3 cuVSLAM viewer + keyboard control
+- `scripts/setup_nao_py2.sh` - Build/install `.venv2` with Python 2.7 + `qi`
+- `scripts/setup_cuvslam_py3.sh` - Build/install `.venv3` with UV + cuVSLAM
 
-## Quick Start
-
-### 1. Start the streamer on the robot
-
-SSH into the NAO and start the streamer:
+## Setup
 
 ```bash
-ssh nao@169.254.81.31
+scripts/setup_nao_py2.sh
+scripts/setup_cuvslam_py3.sh
+```
+
+## Robot Stream
+
+Run this on the robot:
+
+```bash
 python robot_streamer.py
 ```
 
-Leave this running.
-
-### 2. Run the controller locally
-
-In another terminal:
+From the laptop, the stream should be available at:
 
 ```bash
-python2 run_controller.py
+http://169.254.81.31:8080/stream
 ```
 
-Or directly:
+## Direct Controller
 
 ```bash
-python2 slam_controller.py
+source .venv2/bin/activate
+python slam_controller.py
 ```
+
+## cuVSLAM Controller
+
+Terminal 1:
+```bash
+source .venv2/bin/activate
+python nao_motion_bridge.py
+```
+
+Terminal 2:
+```bash
+source .venv3/bin/activate
+python cuvslam_nao_controller.py
+```
+
+The cuVSLAM controller uses approximate NAO camera intrinsics. Replace the
+constants at the top of `cuvslam_nao_controller.py` after calibration.
 
 ## Controls
 
@@ -46,9 +67,9 @@ python2 slam_controller.py
 
 **Click on the video window first** - keys only work when window is focused.
 
-## Config
+## Configuration
 
-Edit `config.py` to set your robot's IP:
+Edit `config.py` if the robot IP changes:
 
 ```python
 ROBOT_IP = "169.254.81.31"

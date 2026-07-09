@@ -1,36 +1,14 @@
-**/*.pyc
-**/*.jpg
-**/*.jpeg
-**/.venv*
-**/venv
+__pycache__/
+*.py[cod]
 
-# Build artifacts
-build/
-*.o
-*.so
-*.a
-*.out
+.venv*/
+.uv-python/
+.qi-config/
 
-# Binaries
-mono_nao
-mono_inertial_nao
-mono_nao_control
-*.exe
-
-# SLAM output files
-KeyFrameTrajectory.txt
-FrameTrajectory.txt
 *.log
+*.jpg
+*.jpeg
+*.png
 
-# SSH keys
 nao-ssh
 nao-ssh.pub
-
-# Models (large files)
-models/
-*.pth
-*.h5
-*.tflite
-*.pt
-*.onnx
-
