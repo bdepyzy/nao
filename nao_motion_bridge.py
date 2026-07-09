@@ -8,10 +8,8 @@ import time
 
 import qi
 
-from config import ROBOT_IP, ROBOT_PORT
 
-
-LISTEN = ("127.0.0.1", 8765)
+LISTEN = ("0.0.0.0", 8765)
 STALE_AFTER_S = 0.35
 
 
@@ -20,7 +18,7 @@ def clamp(value, low, high):
 
 
 session = qi.Session()
-session.connect("tcp://{}:{}".format(ROBOT_IP, ROBOT_PORT))
+session.connect("tcp://127.0.0.1:9559")
 motion = session.service("ALMotion")
 motion.wakeUp()
 

@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_INSTALL_DIR="${ROOT}/.uv-python"
-VENV="${ROOT}/.venv3"
+VENV="${ROOT}/.venv"
 UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}"
 CUVSLAM_WHEEL_URL="${CUVSLAM_WHEEL_URL:-https://github.com/nvidia-isaac/cuVSLAM/releases/download/v16.0.0/cuvslam-16.0.0%2Bcu13-cp312-abi3-manylinux_2_39_x86_64.whl}"
 
@@ -52,6 +52,6 @@ cat <<EOF
 Done.
 
 Use:
-  source .venv3/bin/activate
+  source .venv/bin/activate
   python cuvslam_nao_controller.py
 EOF

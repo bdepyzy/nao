@@ -1,84 +1,162 @@
-# NAO Robot Controller
+# NAO cuVSLAM Controller
 
-Control NAO robot with WASD keys + video feed.
+Laptop Python 3 controller for NAO video, CUDA SLAM, and keyboard movement.
+
+The laptop uses one virtual environment: `.venv`.
+
+The robot does not use a virtual environment. The robot scripts run with NAO's
+built-in Python and NAOqi.
 
 ## Files
 
-- `config.py` - Robot IP and settings
-- `robot_streamer.py` - MJPEG camera streamer; run this on the robot
-- `slam_controller.py` - Python 2 camera viewer + direct NAO control
-- `nao_motion_bridge.py` - Python 2 UDP bridge to `ALMotion`
-- `cuvslam_nao_controller.py` - Python 3 cuVSLAM viewer + keyboard control
-- `scripts/setup_nao_py2.sh` - Build/install `.venv2` with Python 2.7 + `qi`
-- `scripts/setup_cuvslam_py3.sh` - Build/install `.venv3` with UV + cuVSLAM
+- `config.py` - robot IP and stream URL used by laptop code
+- `cuvslam_nao_controller.py` - laptop Python 3 video, cuVSLAM, and keyboard controller
+- `robot_streamer.py` - robot-side camera stream server
+- `nao_motion_bridge.py` - robot-side UDP movement bridge to `ALMotion`
+- `scripts/setup_cuvslam_py3.sh` - creates laptop `.venv` with Python 3.12 and cuVSLAM
 
-## Setup
+## 1. Connect Ethernet
+
+Run this on the laptop, not on the robot.
 
 ```bash
-scripts/setup_nao_py2.sh
-scripts/setup_cuvslam_py3.sh
+nmcli connection modify 'Wired connection 1' \
+  connection.interface-name enp83s0 \
+  ipv4.method manual \
+  ipv4.addresses 169.254.81.30/16 \
+  ipv4.never-default yes \
+  ipv6.method disabled
+
+nmcli connection up 'Wired connection 1'
 ```
 
-## Robot Stream
-
-Run this on the robot:
+Check that the laptop routes to the robot through Ethernet:
 
 ```bash
+ip route get 169.254.81.31
+```
+
+Expected:
+
+```text
+169.254.81.31 dev enp83s0 src 169.254.81.30
+```
+
+Then check the robot is reachable:
+
+```bash
+ping -c 3 169.254.81.31
+ssh nao@169.254.81.31
+```
+
+## 2. Set Up The Laptop venv
+
+Run this on the laptop.
+
+```bash
+scripts/setup_cuvslam_py3.sh
+source .venv/bin/activate
+```
+
+This installs Python 3.12, cuVSLAM, OpenCV, NumPy, and PyYAML into `.venv`.
+
+Do not install NAOqi or Python 2 into this laptop venv. NAOqi runs on the robot.
+
+## 3. Copy Robot Scripts
+
+Run this on the laptop.
+
+```bash
+scp robot_streamer.py nao_motion_bridge.py nao@169.254.81.31:/home/nao/
+```
+
+## 4. Start Robot Services
+
+Open one SSH terminal to the robot:
+
+```bash
+ssh nao@169.254.81.31
 python robot_streamer.py
 ```
 
-From the laptop, the stream should be available at:
+Leave that running.
+
+Open a second SSH terminal to the robot:
 
 ```bash
-http://169.254.81.31:8080/stream
-```
-
-## Direct Controller
-
-```bash
-source .venv2/bin/activate
-python slam_controller.py
-```
-
-## cuVSLAM Controller
-
-Terminal 1:
-```bash
-source .venv2/bin/activate
+ssh nao@169.254.81.31
 python nao_motion_bridge.py
 ```
 
-Terminal 2:
+Leave that running too.
+
+At this point:
+
+- `robot_streamer.py` serves camera video from the robot at `http://169.254.81.31:8080/stream`
+- `nao_motion_bridge.py` listens for movement commands from the laptop on UDP port `8765`
+
+## 5. Run The Laptop Controller
+
+Run this on the laptop.
+
 ```bash
-source .venv3/bin/activate
+source .venv/bin/activate
 python cuvslam_nao_controller.py
 ```
 
-The cuVSLAM controller uses approximate NAO camera intrinsics. Replace the
-constants at the top of `cuvslam_nao_controller.py` after calibration.
+Two windows should open:
+
+- `NAO cuVSLAM` - camera video, pose text, and keyboard focus
+- `NAO SLAM Map` - top-down trajectory, current robot position, origin, and landmarks
+
+Click the video window before using the keyboard.
 
 ## Controls
 
-- **W/S** - Forward/Back
-- **A/D** - Strafe left/right  
-- **Q/E** - Turn left/right
-- **SPACE** - Stop
-- **ESC** - Quit
-
-**Click on the video window first** - keys only work when window is focused.
+- `W/S` - forward/back
+- `A/D` - strafe left/right
+- `Q/E` - turn left/right
+- `SPACE` - stop
+- `ESC` - quit
 
 ## Configuration
 
-Edit `config.py` if the robot IP changes:
+If the robot IP changes, update `config.py`:
 
 ```python
 ROBOT_IP = "169.254.81.31"
 ```
 
+If your Ethernet interface is not `enp83s0`, find the correct name:
+
+```bash
+nmcli device status
+```
+
+Then use that interface name in the `nmcli connection modify` command.
+
 ## Troubleshooting
 
-**"Cannot connect to NAO"** - Robot's NAOqi is down. SSH in and run: `naoqi &`
+If `ping 169.254.81.31` fails, check the route:
 
-**"No video"** - Streamer not running on robot. See step 1 above.
+```bash
+ip route get 169.254.81.31
+```
 
-**Double-speaking robot** - You started multiple NAOqi processes. SSH in and run: `killall naoqi-bin`, then restart with `naoqi &`
+If it shows `wlan0`, the laptop is trying Wi-Fi instead of the Ethernet cable.
+Bring the wired connection up again:
+
+```bash
+nmcli connection up 'Wired connection 1'
+```
+
+If SSH works but there is no video, `robot_streamer.py` is not running on the
+robot.
+
+If movement does not work, `nao_motion_bridge.py` is not running on the robot.
+
+If a robot script cannot connect to NAOqi, restart NAOqi on the robot:
+
+```bash
+naoqi &
+```
