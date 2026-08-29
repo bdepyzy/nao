@@ -17,7 +17,7 @@ built-in Python and NAOqi.
 
 ## 1. Connect Ethernet
 
-Run this on the laptop, not on the robot.
+Run this on the laptop, not on the robot. (granted, this is a hacky way for linux machines, search which way to do it for yourself)
 
 ```bash
 nmcli connection modify 'Wired connection 1' \
